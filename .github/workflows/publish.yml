@@ -2,29 +2,27 @@ name: Publish to crates.io
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify version consistency
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          CARGO_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          if [ "$VERSION" != "$CARGO_VERSION" ]; then
+            echo "::error::Tag v${VERSION} does not match Cargo.toml version ${CARGO_VERSION}"
+            exit 1
+          fi
+          grep -q "## \[${VERSION}\]" CHANGELOG.md || {
+            echo "::error::CHANGELOG.md has no entry for version ${VERSION}"
+            exit 1
+          }
       - uses: dtolnay/rust-toolchain@stable
-      - name: Verify version
-        run: |
-          TAG="${GITHUB_REF#refs/tags/v}"
-          CARGO_VER=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          if [ "$TAG" != "$CARGO_VER" ]; then
-            echo "Tag v$TAG does not match Cargo.toml version $CARGO_VER"
-            exit 1
-          fi
-      - name: Verify changelog
-        run: |
-          TAG="${GITHUB_REF#refs/tags/v}"
-          if ! grep -q "\[$TAG\]" CHANGELOG.md; then
-            echo "CHANGELOG.md has no entry for $TAG"
-            exit 1
-          fi
       - run: cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
