@@ -4,11 +4,17 @@ A lightweight TUI for quick git branch operations. No full-screen git client —
 
 ## Install
 
-```sh
-cargo install githop
+### Homebrew
+
+```bash
+brew install tonegawa07/tap/githop
 ```
 
-Or download a binary from [Releases](https://github.com/tonegawa07/githop/releases).
+### Cargo
+
+```bash
+cargo install githop
+```
 
 ## Usage
 
