@@ -12,6 +12,11 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
 fn main() -> Result<()> {
+    if std::env::args().any(|a| a == "--version" || a == "-V") {
+        println!("githop {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+
     // Verify we're in a git repo
     std::process::Command::new("git")
         .args(["rev-parse", "--git-dir"])
