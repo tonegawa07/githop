@@ -21,7 +21,7 @@ jobs:
             os: ubuntu-latest
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -30,7 +30,7 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ../../../githop-${{ github.ref_name }}-${{ matrix.target }}.tar.gz githop
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: githop-${{ matrix.target }}
           path: githop-*.tar.gz
@@ -39,8 +39,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
         with:
           merge-multiple: true
       - name: Create GitHub Release
@@ -55,8 +55,10 @@ jobs:
   update-homebrew:
     needs: release
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           merge-multiple: true
       - name: Compute checksums
@@ -72,7 +74,7 @@ jobs:
           private-key: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}
           repositories: homebrew-tap
           owner: tonegawa07
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: tonegawa07/homebrew-tap
           token: ${{ steps.app-token.outputs.token }}
