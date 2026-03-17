@@ -4,19 +4,20 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    groups:
-      security:
-        applies-to: security-updates
-      dependencies:
-        applies-to: version-updates
-        patterns:
-          - "*"
+      day: "monday"
+      time: "10:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    groups:
-      actions:
-        patterns:
-          - "*"
+      day: "monday"
+      time: "10:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
