@@ -17,6 +17,11 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    if std::env::args().any(|a| a == "--help" || a == "-h") {
+        print_help();
+        return Ok(());
+    }
+
     // Verify we're in a git repo
     std::process::Command::new("git")
         .args(["rev-parse", "--git-dir"])
@@ -40,6 +45,27 @@ fn main() -> Result<()> {
     terminal.show_cursor()?;
 
     result
+}
+
+fn print_help() {
+    println!("githop {} - Interactive git branch switcher", env!("CARGO_PKG_VERSION"));
+    println!();
+    println!("USAGE: githop [OPTIONS]");
+    println!();
+    println!("OPTIONS:");
+    println!("  -h, --help       Print help");
+    println!("  -V, --version    Print version");
+    println!();
+    println!("KEYBINDINGS:");
+    println!("  j/k, ↑/↓         Navigate branches");
+    println!("  Enter            Switch to selected branch");
+    println!("  y                Copy branch name to clipboard");
+    println!("  d                Delete branch");
+    println!("  n                Create new branch");
+    println!("  r                Rename branch");
+    println!("  /                Filter branches");
+    println!("  Esc              Cancel / clear filter");
+    println!("  q                Quit");
 }
 
 fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
