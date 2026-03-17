@@ -85,11 +85,24 @@ pub fn get_log(branch: &str, count: usize) -> Result<Vec<String>> {
 
 pub fn copy_to_clipboard(text: &str) -> Result<()> {
     use std::io::Write;
-    let mut child = Command::new("pbcopy")
+
+    let (cmd, args) = clipboard_command();
+    let mut child = Command::new(cmd)
+        .args(args)
         .stdin(std::process::Stdio::piped())
         .spawn()
-        .context("failed to spawn pbcopy")?;
+        .with_context(|| format!("failed to spawn clipboard command '{}'", cmd))?;
     child.stdin.as_mut().unwrap().write_all(text.as_bytes())?;
     child.wait()?;
     Ok(())
+}
+
+fn clipboard_command() -> (&'static str, &'static [&'static str]) {
+    if cfg!(target_os = "macos") {
+        ("pbcopy", &[])
+    } else if std::env::var("WAYLAND_DISPLAY").is_ok() {
+        ("wl-copy", &[])
+    } else {
+        ("xclip", &["-selection", "clipboard"])
+    }
 }
