@@ -91,7 +91,7 @@ pub fn copy_to_clipboard(text: &str) -> Result<()> {
         .args(args)
         .stdin(std::process::Stdio::piped())
         .spawn()
-        .context(format!("failed to spawn clipboard command '{}'", cmd))?;
+        .with_context(|| format!("failed to spawn clipboard command '{}'", cmd))?;
     child.stdin.as_mut().unwrap().write_all(text.as_bytes())?;
     child.wait()?;
     Ok(())
