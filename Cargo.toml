@@ -19,3 +19,6 @@ opt-level = "z"
 lto = true
 strip = true
 codegen-units = 1
+
+[dev-dependencies]
+tempfile = "3.27.0"
