@@ -48,7 +48,10 @@ fn main() -> Result<()> {
 }
 
 fn print_help() {
-    println!("githop {} - Interactive git branch switcher", env!("CARGO_PKG_VERSION"));
+    println!(
+        "githop {} - Interactive git branch switcher",
+        env!("CARGO_PKG_VERSION")
+    );
     println!();
     println!("USAGE: githop [OPTIONS]");
     println!();
