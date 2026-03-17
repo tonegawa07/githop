@@ -29,16 +29,22 @@ fn try_run_git(args: &[&str]) -> Option<String> {
 
 pub fn list_branches() -> Result<Vec<Branch>> {
     let merged_names: Vec<String> = try_run_git(&["branch", "--merged"])
-        .map(|output| {
-            output
-                .lines()
-                .map(|l| l.trim().trim_start_matches("* ").to_string())
-                .collect()
-        })
+        .map(|output| parse_branch_names(&output))
         .unwrap_or_default();
 
     let output = run_git(&["branch"])?;
-    let branches = output
+    Ok(parse_branches(&output, &merged_names))
+}
+
+fn parse_branch_names(output: &str) -> Vec<String> {
+    output
+        .lines()
+        .map(|l| l.trim().trim_start_matches("* ").to_string())
+        .collect()
+}
+
+fn parse_branches(output: &str, merged_names: &[String]) -> Vec<Branch> {
+    output
         .lines()
         .filter(|l| !l.trim().is_empty())
         .map(|line| {
@@ -51,8 +57,7 @@ pub fn list_branches() -> Result<Vec<Branch>> {
                 is_merged,
             }
         })
-        .collect();
-    Ok(branches)
+        .collect()
 }
 
 pub fn switch_branch(name: &str) -> Result<()> {
@@ -116,5 +121,159 @@ fn clipboard_command() -> (&'static str, &'static [&'static str]) {
         ("wl-copy", &[])
     } else {
         ("xclip", &["-selection", "clipboard"])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    // --- Unit tests for parse_branches / parse_branch_names ---
+
+    #[test]
+    fn parse_branches_detects_current_branch() {
+        let output = "  feature-a\n* main\n  feature-b\n";
+        let merged = vec!["main".to_string(), "feature-a".to_string()];
+        let branches = parse_branches(output, &merged);
+
+        assert_eq!(branches.len(), 3);
+        assert!(!branches[0].is_current);
+        assert!(branches[1].is_current);
+        assert!(!branches[2].is_current);
+        assert_eq!(branches[1].name, "main");
+    }
+
+    #[test]
+    fn parse_branches_detects_merged_status() {
+        let output = "  feature-a\n* main\n  feature-b\n";
+        let merged = vec!["main".to_string(), "feature-a".to_string()];
+        let branches = parse_branches(output, &merged);
+
+        assert!(branches[0].is_merged); // feature-a
+        assert!(branches[1].is_merged); // main
+        assert!(!branches[2].is_merged); // feature-b
+    }
+
+    #[test]
+    fn parse_branches_skips_empty_lines() {
+        let output = "  feature-a\n\n* main\n  \n";
+        let branches = parse_branches(output, &[]);
+
+        assert_eq!(branches.len(), 2);
+        assert_eq!(branches[0].name, "feature-a");
+        assert_eq!(branches[1].name, "main");
+    }
+
+    #[test]
+    fn parse_branches_empty_output() {
+        let branches = parse_branches("", &[]);
+        assert!(branches.is_empty());
+    }
+
+    #[test]
+    fn parse_branches_no_merged() {
+        let output = "* main\n  dev\n";
+        let branches = parse_branches(output, &[]);
+
+        assert_eq!(branches.len(), 2);
+        assert!(!branches[0].is_merged);
+        assert!(!branches[1].is_merged);
+    }
+
+    #[test]
+    fn parse_branch_names_extracts_names() {
+        let output = "  feature-a\n* main\n  feature-b\n";
+        let names = parse_branch_names(output);
+
+        assert_eq!(names, vec!["feature-a", "main", "feature-b"]);
+    }
+
+    // --- Integration tests with temporary git repo ---
+
+    fn setup_temp_repo() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let run = |args: &[&str]| {
+            Command::new("git")
+                .args(args)
+                .current_dir(dir.path())
+                .env("GIT_AUTHOR_NAME", "test")
+                .env("GIT_AUTHOR_EMAIL", "test@test.com")
+                .env("GIT_COMMITTER_NAME", "test")
+                .env("GIT_COMMITTER_EMAIL", "test@test.com")
+                .output()
+                .unwrap()
+        };
+        run(&["init", "-b", "main"]);
+        std::fs::write(dir.path().join("README.md"), "# test").unwrap();
+        run(&["add", "."]);
+        run(&["commit", "-m", "initial"]);
+        dir
+    }
+
+    fn run_git_in(dir: &Path, args: &[&str]) -> Result<String> {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(dir)
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "test@test.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "test@test.com")
+            .output()
+            .with_context(|| format!("failed to run: git {}", args.join(" ")))?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            bail!("{}", stderr.trim());
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    }
+
+    #[test]
+    fn integration_list_branches_in_temp_repo() {
+        let dir = setup_temp_repo();
+        run_git_in(dir.path(), &["branch", "feature-x"]).unwrap();
+
+        let output = run_git_in(dir.path(), &["branch"]).unwrap();
+        let merged_output = run_git_in(dir.path(), &["branch", "--merged"]).unwrap();
+        let merged_names = parse_branch_names(&merged_output);
+        let branches = parse_branches(&output, &merged_names);
+
+        assert_eq!(branches.len(), 2);
+        let main = branches.iter().find(|b| b.name == "main").unwrap();
+        assert!(main.is_current);
+        assert!(main.is_merged);
+        let feature = branches.iter().find(|b| b.name == "feature-x").unwrap();
+        assert!(!feature.is_current);
+        assert!(feature.is_merged); // no diverged commits, so merged
+    }
+
+    #[test]
+    fn integration_unmerged_branch_detected() {
+        let dir = setup_temp_repo();
+        run_git_in(dir.path(), &["branch", "feature-y"]).unwrap();
+        run_git_in(dir.path(), &["switch", "feature-y"]).unwrap();
+        std::fs::write(dir.path().join("new.txt"), "content").unwrap();
+        run_git_in(dir.path(), &["add", "."]).unwrap();
+        run_git_in(dir.path(), &["commit", "-m", "diverge"]).unwrap();
+        run_git_in(dir.path(), &["switch", "main"]).unwrap();
+
+        let output = run_git_in(dir.path(), &["branch"]).unwrap();
+        let merged_output = run_git_in(dir.path(), &["branch", "--merged"]).unwrap();
+        let merged_names = parse_branch_names(&merged_output);
+        let branches = parse_branches(&output, &merged_names);
+
+        let feature = branches.iter().find(|b| b.name == "feature-y").unwrap();
+        assert!(!feature.is_merged);
+    }
+
+    #[test]
+    fn integration_run_git_fails_outside_repo() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = Command::new("git")
+            .args(["branch"])
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert!(!result.status.success());
     }
 }
