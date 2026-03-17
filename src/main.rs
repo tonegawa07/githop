@@ -24,9 +24,7 @@ fn main() -> Result<()> {
         .ok()
         .filter(|o| o.status.success())
         .ok_or_else(|| {
-            anyhow::anyhow!(
-                "Not a git repository. Run githop from inside a git project directory."
-            )
+            anyhow::anyhow!("Not a git repository. Run githop from inside a git project directory.")
         })?;
 
     enable_raw_mode()?;

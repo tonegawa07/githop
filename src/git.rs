@@ -56,8 +56,12 @@ pub fn list_branches() -> Result<Vec<Branch>> {
 }
 
 pub fn switch_branch(name: &str) -> Result<()> {
-    run_git(&["switch", name])
-        .with_context(|| format!("Could not switch to '{}'. Do you have uncommitted changes?", name))?;
+    run_git(&["switch", name]).with_context(|| {
+        format!(
+            "Could not switch to '{}'. Do you have uncommitted changes?",
+            name
+        )
+    })?;
     Ok(())
 }
 
