@@ -23,7 +23,11 @@ fn main() -> Result<()> {
         .output()
         .ok()
         .filter(|o| o.status.success())
-        .ok_or_else(|| anyhow::anyhow!("Not a git repository"))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Not a git repository. Run githop from inside a git project directory."
+            )
+        })?;
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();
