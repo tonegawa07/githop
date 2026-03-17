@@ -14,7 +14,11 @@ fn run_git(args: &[&str]) -> Result<String> {
         .with_context(|| format!("failed to run: git {}", args.join(" ")))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        bail!("git {} failed: {}", args.join(" "), stderr.trim());
+        let msg = stderr.trim();
+        if msg.is_empty() {
+            bail!("git {} exited with {}", args.join(" "), output.status);
+        }
+        bail!("{}", msg);
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
@@ -52,23 +56,31 @@ pub fn list_branches() -> Result<Vec<Branch>> {
 }
 
 pub fn switch_branch(name: &str) -> Result<()> {
-    run_git(&["switch", name])?;
+    run_git(&["switch", name]).with_context(|| {
+        format!(
+            "Could not switch to '{}'. Do you have uncommitted changes?",
+            name
+        )
+    })?;
     Ok(())
 }
 
 pub fn delete_branch(name: &str, force: bool) -> Result<()> {
     let flag = if force { "-D" } else { "-d" };
-    run_git(&["branch", flag, name])?;
+    run_git(&["branch", flag, name])
+        .with_context(|| format!("Could not delete branch '{}'", name))?;
     Ok(())
 }
 
 pub fn create_branch(name: &str) -> Result<()> {
-    run_git(&["branch", name])?;
+    run_git(&["branch", name])
+        .with_context(|| format!("Could not create branch '{}'. Does it already exist?", name))?;
     Ok(())
 }
 
 pub fn rename_branch(old: &str, new: &str) -> Result<()> {
-    run_git(&["branch", "-m", old, new])?;
+    run_git(&["branch", "-m", old, new])
+        .with_context(|| format!("Could not rename '{}' to '{}'", old, new))?;
     Ok(())
 }
 
@@ -91,7 +103,7 @@ pub fn copy_to_clipboard(text: &str) -> Result<()> {
         .args(args)
         .stdin(std::process::Stdio::piped())
         .spawn()
-        .with_context(|| format!("failed to spawn clipboard command '{}'", cmd))?;
+        .with_context(|| format!("Clipboard not available. Is '{}' installed?", cmd))?;
     child.stdin.as_mut().unwrap().write_all(text.as_bytes())?;
     child.wait()?;
     Ok(())
