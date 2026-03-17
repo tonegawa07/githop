@@ -2,10 +2,6 @@ use crate::git;
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
-fn friendly_error(e: &anyhow::Error) -> String {
-    e.to_string()
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum InputMode {
     Normal,
@@ -208,7 +204,7 @@ impl App {
                                         self.status_message =
                                             Some(format!("Deleted branch '{}'", branch))
                                     }
-                                    Err(e) => self.status_message = Some(friendly_error(&e)),
+                                    Err(e) => self.status_message = Some(format!("Error: {}", e)),
                                 }
                                 self.confirm_action = None;
                                 self.input_mode = InputMode::Normal;
@@ -263,7 +259,7 @@ impl App {
                             self.status_message = Some(format!("Created branch '{}'", name));
                         }
                         Err(e) => {
-                            self.status_message = Some(friendly_error(&e));
+                            self.status_message = Some(format!("Error: {}", e));
                         }
                     }
                     self.refresh_branches();
@@ -299,7 +295,7 @@ impl App {
                                     Some(format!("Renamed '{}' → '{}'", old_name, new_name));
                             }
                             Err(e) => {
-                                self.status_message = Some(friendly_error(&e));
+                                self.status_message = Some(format!("Error: {}", e));
                             }
                         }
                         self.refresh_branches();
@@ -329,7 +325,7 @@ impl App {
                     self.should_quit = true;
                 }
                 Err(e) => {
-                    self.status_message = Some(friendly_error(&e));
+                    self.status_message = Some(format!("Error: {}", e));
                 }
             }
         }
@@ -340,7 +336,7 @@ impl App {
             let name = branch.name.clone();
             match git::copy_to_clipboard(&name) {
                 Ok(_) => self.status_message = Some(format!("Copied '{}'", name)),
-                Err(e) => self.status_message = Some(friendly_error(&e)),
+                Err(e) => self.status_message = Some(format!("Error: {}", e)),
             }
         }
     }

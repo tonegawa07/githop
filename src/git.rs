@@ -14,7 +14,11 @@ fn run_git(args: &[&str]) -> Result<String> {
         .with_context(|| format!("failed to run: git {}", args.join(" ")))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        bail!("{}", stderr.trim());
+        let msg = stderr.trim();
+        if msg.is_empty() {
+            bail!("git {} exited with {}", args.join(" "), output.status);
+        }
+        bail!("{}", msg);
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
