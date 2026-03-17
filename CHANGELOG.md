@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-17
+
+### Added
+
+- `--help` / `-h` flag with usage and keybindings (#6)
+- Unit and integration tests for `git.rs` branch parsing (#4)
+- Linux clipboard support: Wayland (`wl-copy`) and X11 (`xclip`) (#8)
+
+### Changed
+
+- User-friendly error messages with actionable context (#3)
+- CI actions updated to Node.js 24 compatible versions (#7)
+
+### Fixed
+
+- README requirements updated to reflect Linux support (#13)
+
 ## [0.1.1] - 2026-03-16
 
 ### Added
