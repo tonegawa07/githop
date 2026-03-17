@@ -71,7 +71,11 @@ Press `n` to create a new branch. Shows which branch you're branching from (e.g.
 ## Requirements
 
 - Git
-- macOS (uses `pbcopy` for clipboard)
+- macOS or Linux
+- Clipboard support:
+  - macOS: `pbcopy` (pre-installed)
+  - Linux (Wayland): `wl-copy`
+  - Linux (X11): `xclip`
 
 ## License
 
